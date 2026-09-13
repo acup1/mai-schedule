@@ -35,14 +35,77 @@ mai-schedule --help
 nix profile install 'git+https://gitlab.mai.ru/GAPoroshin/schedule.git'
 ```
 
-Запуск без установки:
+Запуск локальной копии без установки:
 
 ```bash
 nix run . -- raw М3О-101БВ-26
 ```
 
+Запустить программу прямо из удалённого репозитория и проверить, что flake
+работает:
+
+```bash
+nix run 'git+https://gitlab.mai.ru/GAPoroshin/schedule.git' -- --help
+```
+
+Например, сразу получить текущую неделю группы:
+
+```bash
+nix run 'git+https://gitlab.mai.ru/GAPoroshin/schedule.git' -- raw М3О-101БВ-26
+```
+
+Эти команды увидят новый flake после того, как `flake.nix` и `flake.lock` будут
+загружены в репозиторий. Если проект приватный, используйте настроенный SSH:
+
+```bash
+nix run 'git+ssh://git@gitlab.mai.ru:2222/GAPoroshin/schedule.git' -- --help
+```
+
 Обновить установленную программу можно командой `nix profile upgrade
 mai-schedule`.
+
+### Добавление в конфигурацию NixOS через flake
+
+В существующем системном `flake.nix` добавьте репозиторий в `inputs` и пакет в
+`environment.systemPackages`:
+
+```nix
+{
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    maiSchedule.url = "git+https://gitlab.mai.ru/GAPoroshin/schedule.git";
+  };
+
+  outputs = { nixpkgs, maiSchedule, ... }: {
+    nixosConfigurations.my-host = nixpkgs.lib.nixosSystem {
+      system = "x86_64-linux";
+      modules = [
+        ./configuration.nix
+        ({ pkgs, ... }: {
+          environment.systemPackages = [
+            maiSchedule.packages.${pkgs.system}.default
+          ];
+        })
+      ];
+    };
+  };
+}
+```
+
+Замените `my-host` на имя своей конфигурации, а `system` — на свою архитектуру,
+например `aarch64-linux`. Затем примените конфигурацию:
+
+```bash
+sudo nixos-rebuild switch --flake /etc/nixos#my-host
+```
+
+Чтобы позднее получить новую версию программы и применить её:
+
+```bash
+cd /etc/nixos
+nix flake update maiSchedule
+sudo nixos-rebuild switch --flake .#my-host
+```
 
 ### Необязательная установка через pip
 
