@@ -1,0 +1,35 @@
+stages:
+  - generate
+  - publish
+
+default:
+  image: python:3.12-slim
+
+variables:
+  PYTHONUNBUFFERED: "1"
+
+generate-schedules:
+  stage: generate
+  script:
+    - python -m mai_schedule generate --output dist --workers 8
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 1 day
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$CI_PIPELINE_SOURCE == "web"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+
+publish-schedules:
+  stage: publish
+  resource_group: schedule-registry
+  needs:
+    - job: generate-schedules
+      artifacts: true
+  script:
+    - python scripts/publish.py dist --workers 8
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$CI_PIPELINE_SOURCE == "web"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'

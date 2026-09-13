@@ -1,93 +1,166 @@
-# schedule
+# Расписание МАИ
 
+Консольная программа получает актуальное расписание учебных групп с публичных
+сервисов МАИ. Есть неинтерактивный raw-режим, TUI с перелистыванием недель и
+генератор JSON-снимков для GitLab Generic Package Registry.
 
+Источник данных — официальные страницы списка групп
+`mai.ru/education/studies/schedule/groups.php` и JSON-файлы
+`public.mai.ru/schedule/data/`. Программа не связана с администрацией МАИ.
 
-## Getting started
+## Быстрый запуск
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+Нужен только Python 3.10 или новее. Runtime-зависимостей нет, поэтому создавать
+виртуальное окружение и устанавливать пакет не обязательно:
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
-
-## Add your files
-
-* [Create](https://docs.gitlab.com/user/project/repository/web_editor/#create-a-file) or [upload](https://docs.gitlab.com/user/project/repository/web_editor/#upload-a-file) files
-* [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
-
-```
-cd existing_repo
-git remote add origin https://gitlab.mai.ru/GAPoroshin/schedule.git
-git branch -M main
-git push -uf origin main
+```bash
+./mai-schedule --help
+./mai-schedule raw М3О-101БВ-26
 ```
 
-## Integrate with your tools
+То же самое без исполняемого файла: `python3 -m mai_schedule ...`.
 
-* [Set up project integrations](https://gitlab.mai.ru/GAPoroshin/schedule/-/settings/integrations)
+### Установка через Nix Flake
 
-## Collaborate with your team
+Из каталога проекта:
 
-* [Invite team members and collaborators](https://docs.gitlab.com/user/project/members/)
-* [Create a new merge request](https://docs.gitlab.com/user/project/merge_requests/creating_merge_requests/)
-* [Automatically close issues from merge requests](https://docs.gitlab.com/user/project/issues/managing_issues/#closing-issues-automatically)
-* [Enable merge request approvals](https://docs.gitlab.com/user/project/merge_requests/approvals/)
-* [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+```bash
+nix profile install .
+mai-schedule --help
+```
 
-## Test and Deploy
+После публикации репозитория программу можно установить напрямую из GitLab:
 
-Use the built-in continuous integration in GitLab.
+```bash
+nix profile install 'git+https://gitlab.mai.ru/GAPoroshin/schedule.git'
+```
 
-* [Get started with GitLab CI/CD](https://docs.gitlab.com/ci/quick_start/)
-* [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/user/application_security/sast/)
-* [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/topics/autodevops/requirements/)
-* [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/user/clusters/agent/)
-* [Set up protected environments](https://docs.gitlab.com/ci/environments/protected_environments/)
+Запуск без установки:
 
-***
+```bash
+nix run . -- raw М3О-101БВ-26
+```
 
-# Editing this README
+Обновить установленную программу можно командой `nix profile upgrade
+mai-schedule`.
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+### Необязательная установка через pip
 
-## Suggestions for a good README
+Если у вашего Python работает `venv`/`ensurepip`, можно установить команду
+`mai-schedule` обычным способом:
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install .
+```
 
-## Name
-Choose a self-explaining name for your project.
+На Nix-Python создание окружения может остановиться на `ensurepip`. В таком
+случае используйте `./mai-schedule`: для этой программы окружение не нужно. Если
+создание `.venv` было прервано, это неполное окружение — в нём может не быть
+`bin/activate`; удалите каталог `.venv` перед новой попыткой создать его.
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+## Получить расписание конкретной группы
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+Текущая неделя:
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+```bash
+./mai-schedule raw М3О-101БВ-26
+```
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+Конкретная неделя, несколько недель или диапазон:
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+```bash
+./mai-schedule raw М3О-101БВ-26 2026-W38
+./mai-schedule raw М3О-101БВ-26 current +1 +2
+./mai-schedule raw М3О-101БВ-26 2026-W38..2026-W42
+```
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+Вместо ISO-недели можно передать любую дату внутри неё: `2026-09-14`.
+Для обработки скриптом добавьте `--json`.
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+Все лабораторные работы или все экзамены, найденные в расписании группы:
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+```bash
+./mai-schedule raw М3О-101БВ-26 --labs
+./mai-schedule raw М3О-101БВ-26 --exams --json
+```
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+Обозначения берутся из поля типа занятия: лабораторные распознаются по `ЛР` и
+вариантам слова «лабораторная», экзамены — по `ЭКЗ`, `ЭКЗАМЕН` и близким
+вариантам. Если МАИ ещё не опубликовал экзамены, список будет пустым.
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+## TUI
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+```bash
+./mai-schedule
+```
 
-## License
-For open source projects, say how it is licensed.
+Без аргументов программа предлагает стрелками выбрать институт, курс и группу.
+Если группа уже известна:
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+```bash
+./mai-schedule tui М3О-101БВ-26
+```
+
+Клавиши интерфейса:
+
+- `←` / `→` — предыдущая и следующая неделя;
+- `l` — все лабораторные, `e` — все экзамены, `w` — вернуться к неделе;
+- `↑` / `↓`, `Page Up` / `Page Down` — прокрутка;
+- `q` — выход.
+
+Посмотреть каталог без TUI:
+
+```bash
+./mai-schedule groups
+./mai-schedule groups --institute 'Институт №3' --course 1
+```
+
+## Ежедневные JSON-снимки
+
+Команда `./mai-schedule generate --output dist` получает все группы и
+создаёт такую структуру:
+
+```text
+dist/
+├── groups.json
+└── М3О-101БВ-26/
+    ├── manifest.json
+    ├── current.json
+    ├── labs.json
+    ├── exams.json
+    ├── week-2026-W36.json
+    └── week-2026-W37.json
+```
+
+Pipeline публикует один Generic Package `mai-schedule`. Его содержимое каждый
+день полностью заменяется свежими файлами:
+
+```text
+.../packages/generic/mai-schedule/latest/<группа>/<файл>
+```
+
+Слово `latest` — постоянная техническая часть URL, которую требует GitLab, а не
+версия расписания. История снимков не хранится: перед ежедневной публикацией
+предыдущий пакет удаляется, после чего загружается только актуальное расписание.
+Временный job artifact живёт один день и нужен лишь для передачи `dist` между
+job-ами.
+
+Файл текущей недели для конкретной группы доступен по постоянному адресу (для
+приватного проекта добавьте подходящий токен):
+
+```bash
+curl -fS \
+  'https://gitlab.mai.ru/api/v4/projects/GAPoroshin%2Fschedule/packages/generic/mai-schedule/latest/%D0%9C3%D0%9E-101%D0%91%D0%92-26/current.json'
+```
+
+Для приватного проекта передайте команде `curl` заголовок
+`PRIVATE-TOKEN: <token>`.
+
+`.gitlab-ci.yml` запускает генерацию и публикацию. Сам cron задаётся в GitLab:
+**Build → Pipeline schedules → New schedule**, например `0 2 * * *` в нужной
+временной зоне. Pipeline также можно запустить вручную. Публикатор сначала
+использует `CI_JOB_TOKEN`. Если установленный GitLab запрещает этому токену
+удалять Packages, добавьте masked CI/CD variable `PACKAGE_TOKEN` с project access
+token: роль `Maintainer`, scope `api`.
