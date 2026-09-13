@@ -32,7 +32,7 @@ mai-schedule --help
 После публикации репозитория программу можно установить напрямую из GitLab:
 
 ```bash
-nix profile install 'git+https://gitlab.mai.ru/GAPoroshin/schedule.git'
+nix profile install 'gitlab:GAPoroshin/schedule?host=gitlab.mai.ru'
 ```
 
 Запуск локальной копии без установки:
@@ -45,13 +45,16 @@ nix run . -- raw М3О-101БВ-26
 работает:
 
 ```bash
-nix run 'git+https://gitlab.mai.ru/GAPoroshin/schedule.git' -- --help
+nix run --refresh 'gitlab:GAPoroshin/schedule?host=gitlab.mai.ru' -- --help
 ```
+
+`--refresh` нужен для проверки сразу после push: он не даёт Nix использовать
+закэшированный предыдущий commit.
 
 Например, сразу получить текущую неделю группы:
 
 ```bash
-nix run 'git+https://gitlab.mai.ru/GAPoroshin/schedule.git' -- raw М3О-101БВ-26
+nix run 'gitlab:GAPoroshin/schedule?host=gitlab.mai.ru' -- raw М3О-101БВ-26
 ```
 
 Эти команды увидят новый flake после того, как `flake.nix` и `flake.lock` будут
@@ -73,7 +76,7 @@ mai-schedule`.
 {
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    maiSchedule.url = "git+https://gitlab.mai.ru/GAPoroshin/schedule.git";
+    maiSchedule.url = "gitlab:GAPoroshin/schedule?host=gitlab.mai.ru";
   };
 
   outputs = { nixpkgs, maiSchedule, ... }: {
