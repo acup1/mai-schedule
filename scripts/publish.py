@@ -124,7 +124,7 @@ def upload(
         f"{PACKAGE_NAME}/{PACKAGE_VERSION}/{encoded_name}"
     )
     data = source.read_bytes()
-    request_headers = {**headers, "Content-Type": "application/json"}
+    request_headers = {**headers, "Content-Type": "text/plain; charset=utf-8"}
     for attempt in range(3):
         request = Request(url, data=data, headers=request_headers, method="PUT")
         try:
@@ -137,25 +137,28 @@ def upload(
 
 
 def _files_to_publish(directory: Path) -> list[tuple[Path, str]]:
-    groups_file = directory / "groups.json"
+    groups_file = directory / "groups.txt"
     if not groups_file.is_file():
         raise PublishError(f"Не найден {groups_file}")
     try:
-        catalog = json.loads(groups_file.read_text(encoding="utf-8"))
-        groups = catalog["groups"]
-    except (OSError, json.JSONDecodeError, KeyError, TypeError) as error:
+        groups = [
+            line.strip()
+            for line in groups_file.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
+    except OSError as error:
         raise PublishError(f"Некорректный {groups_file}: {error}") from error
-    if not isinstance(groups, list) or not all(isinstance(group, str) for group in groups):
-        raise PublishError(f"Некорректный список групп в {groups_file}")
+    if not groups:
+        raise PublishError(f"Список групп в {groups_file} пуст")
 
-    files: list[tuple[Path, str]] = [(groups_file, "groups.json")]
+    files: list[tuple[Path, str]] = [(groups_file, "groups.txt")]
     for group in groups:
         group_directory = directory / group
         if not group_directory.is_dir():
             raise PublishError(f"Не найден каталог группы {group_directory}")
-        group_files = sorted(group_directory.glob("*.json"))
+        group_files = sorted(group_directory.glob("*.txt"))
         if not group_files:
-            raise PublishError(f"В {group_directory} нет JSON-файлов")
+            raise PublishError(f"В {group_directory} нет текстовых файлов")
         files.extend((path, f"{group}/{path.name}") for path in group_files)
     return files
 

@@ -2,11 +2,13 @@
 
 Консольная программа получает актуальное расписание учебных групп с публичных
 сервисов МАИ. Есть неинтерактивный raw-режим, TUI с перелистыванием недель и
-генератор JSON-снимков для GitLab Generic Package Registry.
+генератор текстовых файлов для GitLab Generic Package Registry.
 
 Источник данных — официальные страницы списка групп
 `mai.ru/education/studies/schedule/groups.php` и JSON-файлы
 `public.mai.ru/schedule/data/`. Программа не связана с администрацией МАИ.
+
+[Открыть расписание группы М4О-408Б-23 на текущую неделю](https://gitlab.mai.ru/api/v4/projects/GAPoroshin%2Fschedule/packages/generic/mai-schedule/latest/М4О-408Б-23/current.txt)
 
 ## Быстрый запуск
 
@@ -183,22 +185,25 @@ python -m pip install .
 ./mai-schedule groups --institute 'Институт №3' --course 1
 ```
 
-## Ежедневные JSON-снимки
+## Ежедневные текстовые файлы
 
 Команда `./mai-schedule generate --output dist` получает все группы и
 создаёт такую структуру:
 
 ```text
 dist/
-├── groups.json
+├── groups.txt
 └── М3О-101БВ-26/
-    ├── manifest.json
-    ├── current.json
-    ├── labs.json
-    ├── exams.json
-    ├── week-2026-W36.json
-    └── week-2026-W37.json
+    ├── current.txt
+    ├── labs.txt
+    ├── exams.txt
+    ├── week-2026-W36.txt
+    └── week-2026-W37.txt
 ```
+
+Содержимое файлов группы совпадает с человекочитаемым выводом команды `raw`.
+Например, `current.txt` соответствует `./mai-schedule raw М3О-101БВ-26`, а
+`labs.txt` — `./mai-schedule raw М3О-101БВ-26 --labs`.
 
 Pipeline публикует один Generic Package `mai-schedule`. Его содержимое каждый
 день полностью заменяется свежими файлами:
@@ -218,7 +223,7 @@ job-ами.
 
 ```bash
 curl -fS \
-  'https://gitlab.mai.ru/api/v4/projects/GAPoroshin%2Fschedule/packages/generic/mai-schedule/latest/%D0%9C3%D0%9E-101%D0%91%D0%92-26/current.json'
+  'https://gitlab.mai.ru/api/v4/projects/GAPoroshin%2Fschedule/packages/generic/mai-schedule/latest/%D0%9C3%D0%9E-101%D0%91%D0%92-26/current.txt'
 ```
 
 Для приватного проекта передайте команде `curl` заголовок

@@ -37,7 +37,7 @@ def build_parser() -> argparse.ArgumentParser:
     groups.add_argument("--course", default="all", help="курс от 1 до 6")
     groups.add_argument("--json", action="store_true", help="вывести JSON")
 
-    generate = subparsers.add_parser("generate", help="сгенерировать JSON для всех групп")
+    generate = subparsers.add_parser("generate", help="сгенерировать текстовые файлы для всех групп")
     generate.add_argument("--output", type=Path, default=Path("dist"))
     generate.add_argument("--workers", type=int, default=8)
     return parser
