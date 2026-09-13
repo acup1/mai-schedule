@@ -23,9 +23,17 @@ def today_in_mai() -> date:
     return datetime.now(timezone(timedelta(hours=3))).date()
 
 
+def current_schedule_monday(today: date | None = None) -> date:
+    today = today or today_in_mai()
+    monday = monday_for(today)
+    if today.weekday() == 6:
+        monday += timedelta(weeks=1)
+    return monday
+
+
 def parse_week(value: str, *, today: date | None = None) -> date:
     today = today or today_in_mai()
-    current = monday_for(today)
+    current = current_schedule_monday(today)
     normalised = value.strip().lower()
     if normalised in {"current", "now", "текущая"}:
         return current

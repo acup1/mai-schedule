@@ -8,7 +8,7 @@ import sys
 from .client import MaiScheduleClient, ScheduleError
 from .models import Lesson, is_exam, is_lab
 from .render import render_text, week_title
-from .selection import monday_for, parse_week, select_weeks, today_in_mai
+from .selection import current_schedule_monday, parse_week, select_weeks
 
 
 def _write_text(path: Path, value: str) -> None:
@@ -37,7 +37,7 @@ def write_group(output: Path, group: str, lessons: list[Lesson]) -> None:
             target / f"week-{week}.txt",
             render_text(group, selected, title=week_title(monday)),
         )
-    current_monday = monday_for(today_in_mai())
+    current_monday = current_schedule_monday()
     _write_text(
         target / "current.txt",
         render_text(

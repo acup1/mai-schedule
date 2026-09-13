@@ -7,7 +7,7 @@ from typing import Sequence
 from .client import MaiScheduleClient
 from .models import Lesson, is_exam, is_lab
 from .render import render_text, week_title
-from .selection import monday_for, select_weeks, today_in_mai
+from .selection import current_schedule_monday, select_weeks
 
 
 def _choose(stdscr: curses.window, title: str, items: Sequence[str]) -> str:
@@ -69,7 +69,7 @@ def _browser(stdscr: curses.window, client: MaiScheduleClient, group: str | None
     group = group or _pick_group(stdscr, client)
     _show_loading(stdscr, f"Загружаю расписание {group}…")
     lessons = client.fetch(group)
-    monday = monday_for(today_in_mai())
+    monday = current_schedule_monday()
     mode = "week"
     scroll = 0
     while True:
