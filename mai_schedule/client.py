@@ -5,6 +5,7 @@ import hashlib
 from html.parser import HTMLParser
 import json
 import socket
+import ssl
 import time
 from typing import Any
 from urllib.error import HTTPError, URLError
@@ -16,7 +17,7 @@ from .models import Lesson
 
 GROUPS_URL = "https://mai.ru/education/studies/schedule/groups.php"
 DATA_URL = "https://public.mai.ru/schedule/data/{digest}.json"
-USER_AGENT = "mai-schedule/1.0 (+https://gitlab.mai.ru/GAPoroshin/schedule)"
+USER_AGENT = "mai-schedule/1.0 (+https://github.com/acup1/mai-schedule)"
 
 
 class ScheduleError(RuntimeError):
@@ -62,13 +63,14 @@ class MaiScheduleClient:
     def __init__(self, *, timeout: float = 20.0, retries: int = 3) -> None:
         self.timeout = timeout
         self.retries = retries
+        self.ssl_context = ssl._create_unverified_context()
 
     def _get(self, url: str) -> bytes:
         request = Request(url, headers={"User-Agent": USER_AGENT, "Accept": "application/json,text/html"})
         last_error: Exception | None = None
         for attempt in range(self.retries):
             try:
-                with urlopen(request, timeout=self.timeout) as response:
+                with urlopen(request, timeout=self.timeout, context=self.ssl_context) as response:
                     return response.read()
             except HTTPError as error:
                 if error.code < 500:

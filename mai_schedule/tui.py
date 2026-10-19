@@ -10,6 +10,20 @@ from .render import render_text, week_title
 from .selection import current_schedule_monday, select_weeks
 
 
+_SHIFT_UP_KEYS = frozenset(
+    key for name in ("KEY_SUP", "KEY_SR") if (key := getattr(curses, name, None)) is not None
+)
+_SHIFT_DOWN_KEYS = frozenset(
+    key for name in ("KEY_SDOWN", "KEY_SF") if (key := getattr(curses, name, None)) is not None
+)
+_RUSSIAN_LAYOUT = "ёйцукенгшщзхъфывапролджэячсмитьбю."
+_ASCII_LAYOUT = "`qwertyuiop[]asdfghjkl;'zxcvbnm,./"
+_COMMAND_KEY_TRANSLATION = str.maketrans(
+    _RUSSIAN_LAYOUT + _RUSSIAN_LAYOUT.upper(),
+    _ASCII_LAYOUT + _ASCII_LAYOUT.upper(),
+)
+
+
 def _get_input_key(stdscr: curses.window) -> str | int:
     get_wch = getattr(stdscr, "get_wch", None)
     if get_wch is not None:
@@ -34,6 +48,14 @@ def _get_input_key(stdscr: curses.window) -> str | int:
             return ""
         encoded.append(continuation)
     return encoded.decode("utf-8", errors="ignore")
+
+
+def _get_command_key(stdscr: curses.window) -> int:
+    key = _get_input_key(stdscr)
+    if isinstance(key, int):
+        return key
+    normalized = key.translate(_COMMAND_KEY_TRANSLATION)
+    return ord(normalized) if len(normalized) == 1 else -1
 
 
 def _search_prompt(stdscr: curses.window, previous: str = "") -> str | None:
@@ -150,7 +172,7 @@ def _choose(stdscr: curses.window, title: str, items: Sequence[str]) -> str:
             stdscr.addnstr(height - 1, 0, footer, max(1, width - 1), curses.A_DIM)
         except curses.error:
             pass
-        key = stdscr.getch()
+        key = _get_command_key(stdscr)
         if key in (curses.KEY_UP, ord("k")):
             selected = (selected - 1) % len(items)
             status = ""
@@ -239,12 +261,15 @@ def _browser(stdscr: curses.window, client: MaiScheduleClient, group: str | None
             absolute_row = scroll + row
             style = curses.A_BOLD if absolute_row < 2 else curses.A_NORMAL
             _draw_line(stdscr, row, line, width, style=style, query=search)
-        footer = status or "←/→ неделя · / поиск · n/N дальше/назад · l лабораторные · e экзамены · q выход"
+        footer = status or (
+            "←/→ неделя · ↑/↓ строка · Shift+↑/↓ страница · / поиск · "
+            "l лабораторные · e экзамены · q выход"
+        )
         try:
             stdscr.addnstr(height - 1, 0, footer, max(1, width - 1), curses.A_DIM)
         except curses.error:
             pass
-        key = stdscr.getch()
+        key = _get_command_key(stdscr)
         if key == ord("q"):
             return
         if key == 27:
@@ -289,10 +314,10 @@ def _browser(stdscr: curses.window, client: MaiScheduleClient, group: str | None
         elif key in (curses.KEY_UP, ord("k")):
             scroll = max(0, scroll - 1)
             status = ""
-        elif key == curses.KEY_NPAGE:
+        elif key == curses.KEY_NPAGE or key in _SHIFT_DOWN_KEYS:
             scroll = min(max(0, len(content) - body_height), scroll + body_height)
             status = ""
-        elif key == curses.KEY_PPAGE:
+        elif key == curses.KEY_PPAGE or key in _SHIFT_UP_KEYS:
             scroll = max(0, scroll - body_height)
             status = ""
 

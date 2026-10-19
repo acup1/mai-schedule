@@ -2,13 +2,11 @@
 
 Консольная программа получает актуальное расписание учебных групп с публичных
 сервисов МАИ. Есть неинтерактивный raw-режим, TUI с перелистыванием недель и
-генератор текстовых файлов для GitLab Generic Package Registry.
+генератор текстовых файлов.
 
 Источник данных — официальные страницы списка групп
 `mai.ru/education/studies/schedule/groups.php` и JSON-файлы
 `public.mai.ru/schedule/data/`. Программа не связана с администрацией МАИ.
-
-[Посмотреть расписание группы М4О-408Б-23 на текущую неделю](https://gitlab.mai.ru/api/v4/projects/6298/jobs/artifacts/main/raw/dist/М4О-408Б-23/current.txt?job=generate-schedules)
 
 ## Быстрый запуск
 
@@ -31,10 +29,10 @@ nix profile install .
 mai-schedule --help
 ```
 
-После публикации репозитория программу можно установить напрямую из GitLab:
+После публикации репозитория программу можно установить напрямую из GitHub:
 
 ```bash
-nix profile install 'gitlab:GAPoroshin/schedule?host=gitlab.mai.ru'
+nix profile install 'github:acup1/mai-schedule'
 ```
 
 Запуск локальной копии без установки:
@@ -47,7 +45,7 @@ nix run . -- raw М3О-101БВ-26
 работает:
 
 ```bash
-nix run --refresh 'gitlab:GAPoroshin/schedule?host=gitlab.mai.ru' -- --help
+nix run --refresh 'github:acup1/mai-schedule' -- --help
 ```
 
 `--refresh` нужен для проверки сразу после push: он не даёт Nix использовать
@@ -56,14 +54,14 @@ nix run --refresh 'gitlab:GAPoroshin/schedule?host=gitlab.mai.ru' -- --help
 Например, сразу получить текущую неделю группы:
 
 ```bash
-nix run 'gitlab:GAPoroshin/schedule?host=gitlab.mai.ru' -- raw М3О-101БВ-26
+nix run 'github:acup1/mai-schedule' -- raw М3О-101БВ-26
 ```
 
 Эти команды увидят новый flake после того, как `flake.nix` и `flake.lock` будут
 загружены в репозиторий. Если проект приватный, используйте настроенный SSH:
 
 ```bash
-nix run 'git+ssh://git@gitlab.mai.ru:2222/GAPoroshin/schedule.git' -- --help
+nix run 'git+ssh://git@github.com/acup1/mai-schedule.git' -- --help
 ```
 
 Обновить установленную программу можно командой `nix profile upgrade
@@ -78,7 +76,7 @@ mai-schedule`.
 {
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    maiSchedule.url = "gitlab:GAPoroshin/schedule?host=gitlab.mai.ru";
+    maiSchedule.url = "github:acup1/mai-schedule";
   };
 
   outputs = { nixpkgs, maiSchedule, ... }: {
@@ -178,11 +176,15 @@ python -m pip install .
 
 Клавиши интерфейса:
 
+Буквенные команды работают в английской и русской раскладках на одинаковых
+физических клавишах.
+
 - `←` / `→` — предыдущая и следующая неделя;
 - `l` — все лабораторные, `e` — все экзамены, `w` — вернуться к неделе;
 - `/` — поиск в списке или расписании, `n` / `N` — следующее / предыдущее совпадение;
 - `Esc` — отменить ввод поиска или убрать текущее выделение;
-- `↑` / `↓`, `Page Up` / `Page Down` — прокрутка;
+- `↑` / `↓` — прокрутка на строку;
+- `Shift+↑` / `Shift+↓`, `Page Up` / `Page Down` — прокрутка на целую страницу;
 - `q` — выход.
 
 Посмотреть каталог без TUI:
@@ -192,7 +194,7 @@ python -m pip install .
 ./mai-schedule groups --institute 'Институт №3' --course 1
 ```
 
-## Ежедневные текстовые файлы
+## Текстовые файлы
 
 Команда `./mai-schedule generate --output dist` получает все группы и
 создаёт такую структуру:
@@ -213,39 +215,3 @@ dist/
 `labs.txt` — `./mai-schedule raw М3О-101БВ-26 --labs`.
 По воскресеньям `current.txt` следует тому же правилу и заранее переключается на
 следующую неделю.
-
-Pipeline публикует один Generic Package `mai-schedule`. Его содержимое каждый
-день полностью заменяется свежими файлами:
-
-```text
-.../packages/generic/mai-schedule/latest/<группа>/<файл>
-```
-
-Слово `latest` — постоянная техническая часть URL, которую требует GitLab, а не
-версия расписания. История снимков не хранится: перед ежедневной публикацией
-предыдущий пакет удаляется, после чего загружается только актуальное расписание.
-Временный job artifact живёт один день и нужен лишь для передачи `dist` между
-job-ами.
-
-Для просмотра в браузере используется `raw`-ссылка на файл из последнего
-успешного job `generate-schedules`: GitLab отдаёт её как обычный текст. Generic
-Package Registry остаётся основным хранилищем, но его API принудительно отдаёт
-файлы как скачиваемые данные.
-
-Файл текущей недели для конкретной группы доступен по постоянному адресу (для
-приватного проекта добавьте подходящий токен):
-
-```bash
-curl -fS \
-  'https://gitlab.mai.ru/api/v4/projects/GAPoroshin%2Fschedule/packages/generic/mai-schedule/latest/%D0%9C3%D0%9E-101%D0%91%D0%92-26/current.txt'
-```
-
-Для приватного проекта передайте команде `curl` заголовок
-`PRIVATE-TOKEN: <token>`.
-
-`.gitlab-ci.yml` запускает генерацию и публикацию. Сам cron задаётся в GitLab:
-**Build → Pipeline schedules → New schedule**, например `0 2 * * *` в нужной
-временной зоне. Pipeline также можно запустить вручную. Публикатор сначала
-использует `CI_JOB_TOKEN`. Если установленный GitLab запрещает этому токену
-удалять Packages, добавьте masked CI/CD variable `PACKAGE_TOKEN` с project access
-token: роль `Maintainer`, scope `api`.
