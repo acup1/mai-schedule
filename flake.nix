@@ -17,13 +17,15 @@
       packages = forAllSystems (system:
         let
           pkgs = import nixpkgs { inherit system; };
-          package = pkgs.python3Packages.buildPythonApplication {
+          package = pkgs.rustPlatform.buildRustPackage {
             pname = "mai-schedule";
-            version = "1.0.0";
-            pyproject = true;
+            version = "2.0.0";
             src = ./.;
-            build-system = [ pkgs.python3Packages.setuptools ];
-            doCheck = false;
+            cargoLock = {
+              lockFile = ./Cargo.lock;
+              outputHashes."termutils-0.1.0" =
+                "sha256-IZYzxP+LvIGCq08Tg8mI5OcWiOybI7EuBMG9ryl1Q/s=";
+            };
             meta.mainProgram = "mai-schedule";
           };
         in
