@@ -1289,7 +1289,7 @@ dependencies = [
 [[package]]
 name = "termutils"
 version = "0.1.0"
-source = "git+https://github.com/acup1/termutils.git?rev=3f199a22a8c4f13e89dc7cb144e896a9d1998dc4#3f199a22a8c4f13e89dc7cb144e896a9d1998dc4"
+source = "git+https://github.com/acup1/terminalib.git?rev=3f199a22a8c4f13e89dc7cb144e896a9d1998dc4#3f199a22a8c4f13e89dc7cb144e896a9d1998dc4"
 dependencies = [
  "base64 0.22.1",
  "libc",

@@ -8,7 +8,7 @@ use std::thread;
 use std::time::Duration as StdDuration;
 
 use chrono::Duration as ChronoDuration;
-use termutils::{
+use terminalib::{
     CellStyle, KEY_DOWN, KEY_FAIL, KEY_LEFT, KEY_RIGHT, KEY_UP, Rgb, WindowManager,
     terminal::Terminal,
 };
