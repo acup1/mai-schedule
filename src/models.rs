@@ -1,7 +1,7 @@
 use chrono::{Datelike, NaiveDate};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Lesson {
     pub date: NaiveDate,
     pub weekday: String,

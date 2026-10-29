@@ -23,8 +23,8 @@
             src = ./.;
             cargoLock = {
               lockFile = ./Cargo.lock;
-              outputHashes."termutils-0.1.0" =
-                "sha256-IZYzxP+LvIGCq08Tg8mI5OcWiOybI7EuBMG9ryl1Q/s=";
+              outputHashes."terminalib-0.1.0" =
+                "sha256-jMHN7WG47ex/E/iZ1s+AnG4poEka60RxS6pteG42CFE=";
             };
             meta.mainProgram = "mai-schedule";
           };

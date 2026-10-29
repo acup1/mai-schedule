@@ -25,9 +25,11 @@ const MUTED: Rgb = Rgb::new(126, 140, 156);
 const SELECTED_BG: Rgb = Rgb::new(35, 55, 72);
 const MATCH: Rgb = Rgb::new(250, 204, 21);
 const RETRY_DELAY: StdDuration = StdDuration::from_secs(1);
+const ESCAPE_CONTINUATION_TIMEOUT_MS: u64 = 25;
+const ESCAPE_CONTINUATION_READS: usize = 2;
 const EXIT_MESSAGE: &str = "Выход отменён";
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 enum Input {
     Key(i32),
     Text(String),
@@ -54,7 +56,7 @@ pub fn run_tui(client: &MaiScheduleClient, group: Option<&str>) -> AppResult<()>
         let group = group.to_owned();
         let request_group = group.clone();
         let request_client = client.clone();
-        let lessons = match load_with_retry(
+        let schedule = match load_with_retry(
             &mut terminal,
             &mut windows,
             "Расписание",
@@ -62,10 +64,18 @@ pub fn run_tui(client: &MaiScheduleClient, group: Option<&str>) -> AppResult<()>
             false,
             move || request_client.fetch(&request_group),
         )? {
-            ScreenResult::Value(lessons) => lessons,
+            ScreenResult::Value(schedule) => schedule,
             ScreenResult::Back => unreachable!("back is disabled for an explicit group"),
         };
-        let _ = browse_schedule(&mut terminal, &mut windows, &group, &lessons, false)?;
+        let warning = schedule.cache_warning();
+        let _ = browse_schedule(
+            &mut terminal,
+            &mut windows,
+            &group,
+            &schedule.lessons,
+            warning.as_deref(),
+            false,
+        )?;
         return Ok(());
     }
     pick_group_and_browse(&mut terminal, &mut windows, client)
@@ -136,7 +146,7 @@ fn pick_group_and_browse(
                 };
                 let schedule_client = client.clone();
                 let schedule_group = group.clone();
-                let lessons = match load_with_retry(
+                let schedule = match load_with_retry(
                     terminal,
                     windows,
                     "Расписание",
@@ -144,10 +154,18 @@ fn pick_group_and_browse(
                     true,
                     move || schedule_client.fetch(&schedule_group),
                 )? {
-                    ScreenResult::Value(lessons) => lessons,
+                    ScreenResult::Value(schedule) => schedule,
                     ScreenResult::Back => continue 'groups,
                 };
-                match browse_schedule(terminal, windows, &group, &lessons, true)? {
+                let warning = schedule.cache_warning();
+                match browse_schedule(
+                    terminal,
+                    windows,
+                    &group,
+                    &schedule.lessons,
+                    warning.as_deref(),
+                    true,
+                )? {
                     ScreenResult::Back => continue 'groups,
                     ScreenResult::Value(()) => unreachable!("schedule browsing has no completion"),
                 }
@@ -248,8 +266,12 @@ fn browse_schedule(
     windows: &mut WindowManager,
     group: &str,
     lessons: &[Lesson],
+    warning: Option<&str>,
     can_go_back: bool,
 ) -> AppResult<ScreenResult<()>> {
+    let screen_title = warning
+        .map(|message| format!("⚠ {message}"))
+        .unwrap_or_else(|| "MAI  /  SCHEDULE".into());
     let mut monday = current_schedule_monday(None);
     let mut mode = Mode::Week;
     let mut scroll = 0usize;
@@ -297,7 +319,7 @@ fn browse_schedule(
         draw(
             terminal,
             windows,
-            "MAI  /  SCHEDULE",
+            &screen_title,
             &title,
             &content,
             scroll,
@@ -557,11 +579,16 @@ fn draw(
         return Ok(());
     }
     let available = usize::from(width.saturating_sub(4));
+    let title_color = if title.starts_with('⚠') {
+        MATCH
+    } else {
+        ACCENT
+    };
     window.posprint_styled(
         0,
         2,
         truncate(title, available),
-        CellStyle::foreground(ACCENT),
+        CellStyle::foreground(title_color),
     );
     window.posprint_styled(
         1,
@@ -623,30 +650,63 @@ fn draw(
 
 fn read_input(terminal: &mut Terminal) -> io::Result<Input> {
     let key = terminal.get_key(100, false)?;
+    let mut bytes = terminal_input_bytes(terminal);
+    if bytes == b"\x1b" {
+        for _ in 0..ESCAPE_CONTINUATION_READS {
+            terminal.get_key(ESCAPE_CONTINUATION_TIMEOUT_MS, false)?;
+            let continuation = terminal_input_bytes(terminal);
+            if continuation.is_empty() {
+                break;
+            }
+            bytes.extend_from_slice(&continuation);
+            if decode_escape_sequence(&bytes).is_some() {
+                break;
+            }
+        }
+    }
+    Ok(decode_input(&bytes, key))
+}
+
+fn terminal_input_bytes(terminal: &Terminal) -> Vec<u8> {
     let count = *terminal.readed.lock().expect("input length lock poisoned");
     let buffer = *terminal
         .reading_buffer
         .lock()
         .expect("input buffer lock poisoned");
-    let bytes = &buffer[..count];
-    if bytes == b"\x1b[5~" || bytes == b"\x1b[1;2A" {
-        return Ok(Input::PageUp);
+    buffer[..count].to_vec()
+}
+
+fn decode_input(bytes: &[u8], key: i32) -> Input {
+    if let Some(input) = decode_escape_sequence(bytes) {
+        return input;
     }
-    if bytes == b"\x1b[6~" || bytes == b"\x1b[1;2B" {
-        return Ok(Input::PageDown);
+    if bytes == b"\x1b" {
+        return Input::Key(27);
     }
     if matches!(
         key,
         KEY_LEFT | KEY_RIGHT | KEY_UP | KEY_DOWN | KEY_FAIL | 8 | 10 | 13 | 27 | 127
     ) {
-        return Ok(Input::Key(key));
+        return Input::Key(key);
     }
     if let Ok(text) = std::str::from_utf8(bytes)
         && !text.is_empty()
     {
-        return Ok(Input::Text(text.to_owned()));
+        return Input::Text(text.to_owned());
     }
-    Ok(Input::Key(key))
+    Input::Key(key)
+}
+
+fn decode_escape_sequence(bytes: &[u8]) -> Option<Input> {
+    match bytes {
+        b"\x1b[A" => Some(Input::Key(KEY_UP)),
+        b"\x1b[B" => Some(Input::Key(KEY_DOWN)),
+        b"\x1b[C" => Some(Input::Key(KEY_RIGHT)),
+        b"\x1b[D" => Some(Input::Key(KEY_LEFT)),
+        b"\x1b[5~" | b"\x1b[1;2A" => Some(Input::PageUp),
+        b"\x1b[6~" | b"\x1b[1;2B" => Some(Input::PageDown),
+        _ => None,
+    }
 }
 
 fn command_char(text: &str) -> Option<char> {
@@ -762,5 +822,12 @@ mod tests {
     fn quit_is_global_for_both_keyboard_layouts() {
         assert!(is_quit(&Input::Text("q".into())));
         assert!(is_quit(&Input::Text("й".into())));
+    }
+
+    #[test]
+    fn arrow_sequences_are_not_mistaken_for_escape() {
+        assert_eq!(decode_input(b"\x1b[D", 27), Input::Key(KEY_LEFT));
+        assert_eq!(decode_input(b"\x1b[C", 27), Input::Key(KEY_RIGHT));
+        assert_eq!(decode_input(b"\x1b", 27), Input::Key(27));
     }
 }

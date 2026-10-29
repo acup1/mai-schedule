@@ -70,7 +70,11 @@ fn raw(client: &MaiScheduleClient, mut args: Vec<String>) -> AppResult<()> {
         .ok_or_else(|| AppError::new("raw требует имя группы"))?;
     let weeks = args.into_iter().skip(1).collect::<Vec<_>>();
     reject_options(&weeks)?;
-    let lessons = client.fetch(&group)?;
+    let schedule = client.fetch(&group)?;
+    if let Some(warning) = schedule.cache_warning() {
+        eprintln!("Предупреждение: {warning}");
+    }
+    let lessons = schedule.lessons;
     let (selected, kind, week, title): (Vec<Lesson>, &str, Option<String>, String) = if labs {
         (
             lessons.into_iter().filter(is_lab).collect(),

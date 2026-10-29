@@ -625,7 +625,7 @@ dependencies = [
  "scraper",
  "serde",
  "serde_json",
- "termutils",
+ "terminalib",
  "url",
 ]
 
@@ -1278,22 +1278,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "termios"
-version = "0.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "411c5bf740737c7918b8b1fe232dca4dc9f8e754b8ad5e20966814001ed0ac6b"
-dependencies = [
- "libc",
-]
-
-[[package]]
-name = "termutils"
+name = "terminalib"
 version = "0.1.0"
-source = "git+https://github.com/acup1/terminalib.git?rev=3f199a22a8c4f13e89dc7cb144e896a9d1998dc4#3f199a22a8c4f13e89dc7cb144e896a9d1998dc4"
+source = "git+https://github.com/acup1/terminalib.git?rev=02753b98a940111464a1ba30b54ece1eb67b5167#02753b98a940111464a1ba30b54ece1eb67b5167"
 dependencies = [
  "base64 0.22.1",
  "libc",
- "termios",
 ]
 
 [[package]]

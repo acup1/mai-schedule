@@ -111,7 +111,12 @@ pub fn generate_all(output: &Path, workers: usize, client: &MaiScheduleClient) -
 
         let mut errors = Vec::new();
         for (index, (group, result)) in receiver.into_iter().enumerate() {
-            match result.and_then(|lessons| write_group(output, &group, &lessons)) {
+            match result.and_then(|schedule| {
+                if let Some(warning) = schedule.cache_warning() {
+                    eprintln!("WARNING {group}: {warning}");
+                }
+                write_group(output, &group, &schedule.lessons)
+            }) {
                 Ok(()) => println!("[{}/{}] {group}", index + 1, groups.len()),
                 Err(error) => {
                     eprintln!("ERROR {group}: {error}");
